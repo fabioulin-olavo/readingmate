@@ -59,8 +59,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Excluir fontes não usadas do google_fonts
-            resourceConfigurations += listOf("en")
         }
     }
 }
