@@ -54,9 +54,9 @@ class _ProgressPainter extends CustomPainter {
     required this.barHeight,
   });
 
-  static const _amber = Color(0xFFD97706);
+  static const _amber = Color(0xFFF59E0B);
   static const _trackColor = Color(0xFF3A3228);
-  static const _tickDone = Color(0xFFD97706);
+  static const _tickDone = Color(0xFFF59E0B);
   static const _tickFuture = Color(0xFF5A5248);
   static const _tickCurrent = Color(0xFFFFFFFF);
 

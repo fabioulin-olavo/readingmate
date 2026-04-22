@@ -25,10 +25,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() { _loading = true; _error = null; });
     try {
       final results = await Future.wait([
         ApiService.fetchLibrary(),
@@ -42,10 +39,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
@@ -55,21 +49,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
       allowedExtensions: ['pdf', 'epub', 'jpg', 'png'],
     );
     if (result == null || result.files.single.path == null) return;
-
     final path = result.files.single.path!;
     final name = result.files.single.name;
-    // Limpar nome do arquivo para exibição — remover lixo técnico
-    final displayName = name.length > 40 
-        ? '${name.substring(0, 37)}...' 
-        : name;
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('📖 Analisando livro... pode levar 30s'),
-        backgroundColor: const Color(0xFF2A2218),
+        content: const Row(
+          children: [
+            SizedBox(width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF59E0B))),
+            SizedBox(width: 12),
+            Text('Analisando livro... pode levar 30s',
+              style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E1E2E),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 35),
       ),
     );
 
@@ -80,21 +78,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${book.emoji} ${book.title} adicionado!'),
-            backgroundColor: const Color(0xFF2A2218),
+            content: Text('${book.emoji} ${book.title} adicionado!',
+              style: const TextStyle(color: Colors.white)),
+            backgroundColor: const Color(0xFF1E1E2E),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: $e'),
+            content: Text('Erro: $e', style: const TextStyle(color: Colors.white)),
             backgroundColor: Colors.red.shade900,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -105,14 +105,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remover livro?'),
-        content: Text('${book.emoji} ${book.title}'),
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remover livro?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('${book.emoji} ${book.title}',
+          style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade800),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Remover'),
           ),
@@ -127,89 +132,150 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ReadingMate 📚'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
-                      const SizedBox(height: 8),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                          onPressed: _load,
-                          child: const Text('Tentar novamente')),
-                    ],
-                  ),
-                )
-              : _books.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('📚', style: TextStyle(fontSize: 72)),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Sua biblioteca está vazia',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Toque em + para adicionar um livro',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.85,
-                      ),
-                      itemCount: _books.length,
-                      itemBuilder: (context, i) => _BookCard(
-                        book: _books[i],
-                        isDue: _dueBookIds.contains(_books[i].id),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(book: _books[i]),
-                            ),
-                          );
-                          // Recarregar revisões ao voltar
-                          _load();
-                        },
-                        onDelete: () => _delete(_books[i]),
-                      ),
+      backgroundColor: const Color(0xFF0D0D1A),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Minha Biblioteca',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          )),
+                        const SizedBox(height: 4),
+                        Text(
+                          _books.isEmpty
+                              ? 'Adicione seu primeiro livro'
+                              : '${_books.length} livro${_books.length != 1 ? "s" : ""}',
+                          style: const TextStyle(color: Colors.white38, fontSize: 14),
+                        ),
+                      ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, color: Colors.white54),
+                    onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
+                    onPressed: _load,
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Body ────────────────────────────────────────────────────
+            Expanded(
+              child: _loading
+                ? const Center(child: CircularProgressIndicator(
+                    color: Color(0xFFF59E0B)))
+                : _error != null
+                  ? _buildError()
+                  : _books.isEmpty
+                    ? _buildEmpty()
+                    : _buildGrid(),
+            ),
+          ],
+        ),
+      ),
+
+      // ── FAB ─────────────────────────────────────────────────────────
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _upload,
-        icon: const Icon(Icons.add),
-        label: const Text('Adicionar livro'),
+        backgroundColor: const Color(0xFFF59E0B),
+        foregroundColor: Colors.black,
+        icon: const Icon(Icons.add_rounded, size: 22),
+        label: const Text('Adicionar livro',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        elevation: 8,
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.white24),
+            const SizedBox(height: 16),
+            const Text('Sem conexão com o servidor',
+              style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(_error!, textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFF59E0B),
+                side: const BorderSide(color: Color(0xFFF59E0B)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              onPressed: _load,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 120, height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E2E),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const Center(
+              child: Text('📚', style: TextStyle(fontSize: 52))),
+          ),
+          const SizedBox(height: 24),
+          const Text('Sua biblioteca está vazia',
+            style: TextStyle(color: Colors.white, fontSize: 20,
+              fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Toque em + para adicionar um livro',
+            style: TextStyle(color: Colors.white38, fontSize: 14)),
+          const SizedBox(height: 80), // espaço pro FAB
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGrid() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: _books.length,
+      itemBuilder: (context, i) => _BookCard(
+        book: _books[i],
+        isDue: _dueBookIds.contains(_books[i].id),
+        onTap: () async {
+          await Navigator.push(context,
+            MaterialPageRoute(builder: (_) => ChatScreen(book: _books[i])));
+          _load();
+        },
+        onDelete: () => _delete(_books[i]),
       ),
     );
   }
@@ -232,68 +298,111 @@ class _BookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E2E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.06),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // Emoji / capa
+              Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A3E),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(book.emoji,
+                    style: const TextStyle(fontSize: 36)),
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isDue)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('📅 Revisar hoje',
+                          style: TextStyle(
+                            color: Color(0xFFF59E0B),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          )),
+                      ),
+                    Text(book.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
+                      )),
+                    const SizedBox(height: 4),
+                    Text(book.author,
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 13,
+                      )),
+                    if (book.chapters > 0) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.menu_book_rounded,
+                            size: 12, color: Color(0xFFF59E0B)),
+                          const SizedBox(width: 4),
+                          Text('${book.chapters} capítulos',
+                            style: const TextStyle(
+                              color: Color(0xFFF59E0B),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            )),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Ações
+              Column(
                 children: [
-                  Text(book.emoji,
-                      style: const TextStyle(fontSize: 48)),
-                  const SizedBox(height: 12),
-                  Text(
-                    book.title,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    book.author,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 24),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 28, height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close_rounded,
+                        color: Colors.white38, size: 16),
+                    ),
                   ),
                 ],
               ),
-            ),
-            // Badge de revisão pendente (canto superior esquerdo)
-            if (isDue)
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    '📅 Revisar',
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            // Botão de deletar (canto superior direito)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.close, size: 16),
-                onPressed: onDelete,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

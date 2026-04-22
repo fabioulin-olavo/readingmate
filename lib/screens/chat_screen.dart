@@ -466,7 +466,7 @@ class _ChatScreenState extends State<ChatScreen>
               icon: Icon(
                   _handsFree ? Icons.hearing : Icons.hearing_disabled),
               tooltip: 'Hands-free',
-              color: _handsFree ? const Color(0xFFD97706) : null,
+              color: _handsFree ? const Color(0xFFF59E0B) : null,
               onPressed: _toggleHandsFree,
             ),
           ],
@@ -474,7 +474,7 @@ class _ChatScreenState extends State<ChatScreen>
         body: Column(
           children: [
             if (_connecting) const LinearProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD97706)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
             ),
             if (!_connected && !_connecting)
               MaterialBanner(
@@ -587,7 +587,7 @@ class _ChatScreenState extends State<ChatScreen>
               duration: const Duration(milliseconds: 200),
               child: IconButton(
                 icon: const Icon(Icons.send_rounded,
-                    color: Color(0xFFD97706)),
+                    color: Color(0xFFF59E0B)),
                 onPressed:
                     _connected && val.text.isNotEmpty ? _sendText : null,
               ),
@@ -634,11 +634,11 @@ class _ChatScreenState extends State<ChatScreen>
         height: 72,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFD97706).withOpacity(0.15),
-          border: Border.all(color: const Color(0xFFD97706), width: 2),
+          color: const Color(0xFFF59E0B).withOpacity(0.15),
+          border: Border.all(color: const Color(0xFFF59E0B), width: 2),
         ),
         child: const Icon(Icons.volume_up,
-            color: Color(0xFFD97706), size: 32),
+            color: Color(0xFFF59E0B), size: 32),
       );
     }
 
@@ -689,38 +689,39 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == MessageRole.user;
-    final colors = Theme.of(context).colorScheme;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.80),
+        margin: EdgeInsets.only(
+          top: 4, bottom: 4,
+          left: isUser ? 48 : 0,
+          right: isUser ? 0 : 48,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isUser
-              ? const Color(0xFFD97706)
-              : const Color(0xFF2A2218),
-          borderRadius: BorderRadius.circular(18).copyWith(
-            bottomRight: isUser ? const Radius.circular(4) : null,
-            bottomLeft: !isUser ? const Radius.circular(4) : null,
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFF1E1E2E),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isUser ? 18 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 18),
+          ),
+          border: isUser ? null : Border.all(
+            color: Colors.white.withOpacity(0.06),
           ),
         ),
-        child: isUser
-            ? Text(
-                message.text,
-                style: const TextStyle(fontSize: 14, color: Colors.white),
-              )
-            : Text(
-                message.text,
-                style: TextStyle(
-                  fontFamily: 'Georgia',
-                  fontSize: 14,
-                  height: 1.65,
-                  color: Colors.white.withOpacity(0.92),
-                ),
-              ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.55,
+            color: isUser ? Colors.black87 : Colors.white.withOpacity(0.9),
+            fontWeight: isUser ? FontWeight.w500 : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
@@ -734,16 +735,68 @@ class _TypingBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.only(top: 4, bottom: 4, right: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          color: const Color(0xFF1E1E2E),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(18),
+            topRight: Radius.circular(18),
+            bottomRight: Radius.circular(18),
+            bottomLeft: Radius.circular(4),
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.06)),
         ),
-        child: const Text('✍️ digitando...',
-            style: TextStyle(fontStyle: FontStyle.italic)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Dot(delay: 0),
+            const SizedBox(width: 4),
+            _Dot(delay: 150),
+            const SizedBox(width: 4),
+            _Dot(delay: 300),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _Dot extends StatefulWidget {
+  final int delay;
+  const _Dot({required this.delay});
+  @override
+  State<_Dot> createState() => _DotState();
+}
+
+class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 600));
+    _anim = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _ctrl.repeat(reverse: true);
+    });
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _anim,
+    child: Container(
+      width: 7, height: 7,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF59E0B),
+        shape: BoxShape.circle,
+      ),
+    ),
+  );
 }

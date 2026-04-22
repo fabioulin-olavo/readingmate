@@ -5,8 +5,8 @@ void main() {
   runApp(const ReadingMateApp());
 }
 
-// Paleta ReadingMate — âmbar/sépia (foco, leitura)
-const _seed = Color(0xFFD97706); // âmbar
+// Paleta ReadingMate — grafite escuro + âmbar (inspirado em Zest/Dribbble)
+const _seed = Color(0xFFF59E0B); // âmbar brilhante
 
 class ReadingMateApp extends StatelessWidget {
   const ReadingMateApp({super.key});
@@ -55,8 +55,8 @@ ThemeData _buildTheme(Brightness brightness) {
     // AppBar discreta
     appBarTheme: AppBarTheme(
       backgroundColor: brightness == Brightness.dark
-          ? const Color(0xFF1A1612)
-          : const Color(0xFFFFF8EE),
+          ? const Color(0xFF0D0D1A)
+          : const Color(0xFFF5F5F5),
       foregroundColor: brightness == Brightness.dark
           ? Colors.white
           : Colors.black87,
@@ -68,15 +68,15 @@ ThemeData _buildTheme(Brightness brightness) {
         color: brightness == Brightness.dark ? Colors.white : Colors.black87,
       ),
     ),
-    // Scaffold com fundo sépia escuro
+    // Scaffold com fundo grafite profundo
     scaffoldBackgroundColor: brightness == Brightness.dark
-        ? const Color(0xFF1A1612)
-        : const Color(0xFFFFF8EE),
+        ? const Color(0xFF0D0D1A)
+        : const Color(0xFFF5F5F5),
     // Cards
     cardTheme: CardTheme(
       color: brightness == Brightness.dark
-          ? const Color(0xFF2A2218)
-          : const Color(0xFFFFF3DC),
+          ? const Color(0xFF1E1E2E)
+          : const Color(0xFFFFFFFF),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
