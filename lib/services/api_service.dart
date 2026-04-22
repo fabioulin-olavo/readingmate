@@ -5,7 +5,7 @@ import '../models/book.dart';
 
 class ApiService {
   static const _urlKey = 'backend_url';
-  static const _defaultUrl = 'http://10.0.2.2:8765'; // Android emulator → localhost
+  static const _defaultUrl = 'http://10.0.2.2:8000'; // FastAPI port
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -19,7 +19,7 @@ class ApiService {
 
   static Future<List<Book>> fetchLibrary() async {
     final base = await getBaseUrl();
-    final res = await http.get(Uri.parse('$base/library'));
+    final res = await http.get(Uri.parse('$base/books/'));
     if (res.statusCode != 200) throw Exception('Library fetch failed');
     final List<dynamic> data = jsonDecode(res.body);
     return data.map((j) => Book.fromJson(j)).toList();
@@ -27,17 +27,31 @@ class ApiService {
 
   static Future<Book> uploadFile(String filePath, String fileName) async {
     final base = await getBaseUrl();
-    final request = http.MultipartRequest('POST', Uri.parse('$base/library/upload'));
+    final request = http.MultipartRequest('POST', Uri.parse('$base/books/upload'));
     request.files.add(await http.MultipartFile.fromPath('file', filePath, filename: fileName));
     final streamed = await request.send();
     final body = await streamed.stream.bytesToString();
     if (streamed.statusCode != 200) throw Exception('Upload failed: $body');
+    // Note: backend returns {"book_id": "...", "status": "processing"}
+    // Flutter model Book.fromJson might need adjustment if it expects more fields
     return Book.fromJson(jsonDecode(body));
   }
 
   static Future<void> deleteBook(String bookId) async {
     final base = await getBaseUrl();
-    await http.delete(Uri.parse('$base/library/$bookId'));
+    await http.delete(Uri.parse('$base/books/$bookId'));
+  }
+
+  static Future<String> createSession(String bookId) async {
+    final base = await getBaseUrl();
+    final res = await http.post(
+      Uri.parse('$base/sessions/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'book_id': bookId, 'mode': 'deep_dive'}),
+    );
+    if (res.statusCode != 200) throw Exception('Session creation failed: ${res.body}');
+    final data = jsonDecode(res.body);
+    return data['id'] as String;
   }
 
   static Future<List<dynamic>> fetchDueBooks() async {
@@ -61,13 +75,13 @@ class ApiService {
         body: jsonEncode({'score': score}),
       );
     } catch (_) {
-      // Silencioso — não crítico
+      // Silencioso
     }
   }
 
-  static Future<String> getWsUrl(String bookId) async {
+  static Future<String> getWsUrl(String sessionId) async {
     final base = await getBaseUrl();
     final wsBase = base.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');
-    return '$wsBase/ws/$bookId';
+    return '$wsBase/ws/$sessionId';
   }
 }

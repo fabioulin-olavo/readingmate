@@ -24,15 +24,27 @@ jobs:
           flutter-version: '3.29.3'
           channel: 'stable'
 
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/readingmate.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=readingmate.jks
+          EOF
+
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Build APK (debug — signed para instalação direta)
-        run: flutter build apk --debug
+      - name: Build APK release
+        run: flutter build apk --release --shrink
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: readingmate-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: readingmate-release
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7

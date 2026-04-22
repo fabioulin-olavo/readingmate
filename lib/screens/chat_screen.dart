@@ -67,7 +67,11 @@ class _ChatScreenState extends State<ChatScreen>
   Future<void> _connect() async {
     setState(() => _connecting = true);
     try {
-      final wsUrl = await ApiService.getWsUrl(widget.book.id);
+      // 1. Criar sessão primeiro
+      final sessionId = await ApiService.createSession(widget.book.id);
+      
+      // 2. Conectar ao WebSocket com o sessionId
+      final wsUrl = await ApiService.getWsUrl(sessionId);
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _sub = _channel!.stream.listen(
         _onMessage,
