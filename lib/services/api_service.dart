@@ -5,7 +5,7 @@ import '../models/book.dart';
 
 class ApiService {
   static const _urlKey = 'backend_url';
-  static const _defaultUrl = 'http://10.0.2.2:8000'; // FastAPI port
+  static const _defaultUrl = 'http://54.180.201.135:8765'; // Servidor ReadingMate
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
