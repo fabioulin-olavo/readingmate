@@ -259,25 +259,32 @@ class _ChatScreenState extends State<ChatScreen>
         path: _recordingPath!);
     setState(() => _isRecording = true);
 
-    // Polling VAD a cada 500ms
-    _vadTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
-      if (!_isRecording || !_connected) return;
-      // Ler últimos dados gravados (snapshot parcial)
-      final path = _recordingPath;
-      if (path == null) return;
-      try {
-        final file = File(path);
-        if (!await file.exists()) return;
-        final bytes = await file.readAsBytes();
-        if (bytes.length < 4000) return; // Menos de ~250ms — ignorar
+    // VAD local baseado em amplitude — sem depender do servidor
+    // Detecta silêncio prolongado e para automaticamente
+    int silentFrames = 0;
+    int totalFrames = 0;
+    const int silenceThreshold = 6; // 6 frames × 300ms = 1.8s de silêncio
+    const double ampThresholdDb = -40.0;
 
-        // Enviar últimos 2s (aprox 32KB em AAC) para VAD check
-        final tail = bytes.length > 32000
-            ? bytes.sublist(bytes.length - 32000)
-            : bytes;
-        final b64 = base64Encode(tail);
-        _channel!.sink
-            .add(jsonEncode({'type': 'vad_check', 'content': b64}));
+    _vadTimer = Timer.periodic(const Duration(milliseconds: 300), (_) async {
+      if (!_isRecording || !_connected) return;
+      totalFrames++;
+
+      try {
+        final amp = await _recorder.getAmplitude();
+        final db = amp.current; // dB, negativo = silêncio
+
+        if (db < ampThresholdDb) {
+          silentFrames++;
+        } else {
+          silentFrames = 0; // reset se detectar fala
+        }
+
+        // Só para após ter gravado pelo menos 1s de fala (totalFrames > 3)
+        // e depois detectar silêncio prolongado
+        if (silentFrames >= silenceThreshold && totalFrames > 4) {
+          _stopHandsFreeRecording();
+        }
       } catch (_) {}
     });
   }
