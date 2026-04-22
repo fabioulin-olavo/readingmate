@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'screens/library_screen.dart';
 
 void main() {
@@ -31,17 +30,16 @@ ThemeData _buildTheme(Brightness brightness) {
     brightness: brightness,
   );
 
-  // Tipografia: Merriweather para corpo (leitura), Inter para UI
-  final textTheme = GoogleFonts.interTextTheme(
-    ThemeData(brightness: brightness).textTheme,
-  ).copyWith(
-    // Mensagens do tutor — serifa, mais "livro"
-    bodyLarge: GoogleFonts.merriweather(
+  // Tipografia: Georgia/serif para corpo (leitura), sistema para UI
+  final textTheme = ThemeData(brightness: brightness).textTheme.copyWith(
+    bodyLarge: TextStyle(
+      fontFamily: 'Georgia',
       fontSize: 15,
       height: 1.6,
       color: brightness == Brightness.dark ? Colors.white : Colors.black87,
     ),
-    bodyMedium: GoogleFonts.merriweather(
+    bodyMedium: TextStyle(
+      fontFamily: 'Georgia',
       fontSize: 14,
       height: 1.5,
       color: brightness == Brightness.dark
@@ -64,7 +62,7 @@ ThemeData _buildTheme(Brightness brightness) {
           : Colors.black87,
       elevation: 0,
       centerTitle: false,
-      titleTextStyle: GoogleFonts.inter(
+      titleTextStyle: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w600,
         color: brightness == Brightness.dark ? Colors.white : Colors.black87,

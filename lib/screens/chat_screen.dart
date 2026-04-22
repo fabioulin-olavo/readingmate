@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../widgets/chapter_progress_bar.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -707,14 +706,12 @@ class _MessageBubble extends StatelessWidget {
         child: isUser
             ? Text(
                 message.text,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.white),
               )
             : Text(
                 message.text,
-                style: GoogleFonts.merriweather(
+                style: TextStyle(
+                  fontFamily: 'Georgia',
                   fontSize: 14,
                   height: 1.65,
                   color: Colors.white.withOpacity(0.92),
