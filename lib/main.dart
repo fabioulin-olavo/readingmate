@@ -6,7 +6,7 @@ void main() {
 }
 
 // Paleta ReadingMate — grafite escuro + âmbar (inspirado em Zest/Dribbble)
-const _seed = Color(0xFFF59E0B); // âmbar brilhante
+const _seed = Color(0xFFF59E0B); // âmbar — accent principal
 
 class ReadingMateApp extends StatelessWidget {
   const ReadingMateApp({super.key});
@@ -70,8 +70,8 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     // Scaffold com fundo grafite profundo
     scaffoldBackgroundColor: brightness == Brightness.dark
-        ? const Color(0xFF0D0D1A)
-        : const Color(0xFFF5F5F5),
+        ? const Color(0xFF000000)
+        : const Color(0xFFF2F2F7),
     // Cards
     cardTheme: CardTheme(
       color: brightness == Brightness.dark
