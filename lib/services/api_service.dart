@@ -40,6 +40,31 @@ class ApiService {
     await http.delete(Uri.parse('$base/library/$bookId'));
   }
 
+  static Future<List<dynamic>> fetchDueBooks() async {
+    try {
+      final base = await getBaseUrl();
+      final res = await http.get(Uri.parse('$base/sessions/due'));
+      if (res.statusCode != 200) return [];
+      final data = jsonDecode(res.body);
+      return (data['due_books'] as List<dynamic>?) ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> submitReviewScore(String bookId, double score) async {
+    try {
+      final base = await getBaseUrl();
+      await http.post(
+        Uri.parse('$base/sessions/$bookId/review-score'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'score': score}),
+      );
+    } catch (_) {
+      // Silencioso — não crítico
+    }
+  }
+
   static Future<String> getWsUrl(String bookId) async {
     final base = await getBaseUrl();
     final wsBase = base.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');

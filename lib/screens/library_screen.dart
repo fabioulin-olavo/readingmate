@@ -14,6 +14,7 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   List<Book> _books = [];
+  Set<String> _dueBookIds = {};
   bool _loading = true;
   String? _error;
 
@@ -24,12 +25,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final books = await ApiService.fetchLibrary();
-      setState(() { _books = books; _loading = false; });
+      final results = await Future.wait([
+        ApiService.fetchLibrary(),
+        ApiService.fetchDueBooks(),
+      ]);
+      setState(() {
+        _books = results[0] as List<Book>;
+        _dueBookIds = Set<String>.from(
+          (results[1] as List<dynamic>).map((b) => b['book_id'] as String),
+        );
+        _loading = false;
+      });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
@@ -73,8 +89,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
         title: const Text('Remover livro?'),
         content: Text('${book.emoji} ${book.title}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remover')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remover'),
+          ),
         ],
       ),
     );
@@ -106,11 +128,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const Icon(Icons.error_outline,
+                          size: 48, color: Colors.red),
                       const SizedBox(height: 8),
                       Text(_error!, textAlign: TextAlign.center),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _load, child: const Text('Tentar novamente')),
+                      FilledButton(
+                          onPressed: _load,
+                          child: const Text('Tentar novamente')),
                     ],
                   ),
                 )
@@ -119,7 +144,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('📚', style: TextStyle(fontSize: 64)),
+                          const Text('📚',
+                              style: TextStyle(fontSize: 64)),
                           const SizedBox(height: 16),
                           const Text('Sua biblioteca está vazia'),
                           const SizedBox(height: 8),
@@ -133,7 +159,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
@@ -142,10 +169,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       itemCount: _books.length,
                       itemBuilder: (context, i) => _BookCard(
                         book: _books[i],
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => ChatScreen(book: _books[i])),
-                        ),
+                        isDue: _dueBookIds.contains(_books[i].id),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(book: _books[i]),
+                            ),
+                          );
+                          // Recarregar revisões ao voltar
+                          _load();
+                        },
                         onDelete: () => _delete(_books[i]),
                       ),
                     ),
@@ -160,10 +194,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
 class _BookCard extends StatelessWidget {
   final Book book;
+  final bool isDue;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _BookCard({required this.book, required this.onTap, required this.onDelete});
+  const _BookCard({
+    required this.book,
+    required this.isDue,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +218,8 @@ class _BookCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(book.emoji, style: const TextStyle(fontSize: 48)),
+                  Text(book.emoji,
+                      style: const TextStyle(fontSize: 48)),
                   const SizedBox(height: 12),
                   Text(
                     book.title,
@@ -193,11 +234,34 @@ class _BookCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ],
               ),
             ),
+            // Badge de revisão pendente (canto superior esquerdo)
+            if (isDue)
+              Positioned(
+                top: 6,
+                left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade700,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    '📅 Revisar',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            // Botão de deletar (canto superior direito)
             Positioned(
               top: 4,
               right: 4,
