@@ -58,11 +58,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     final path = result.files.single.path!;
     final name = result.files.single.name;
+    // Limpar nome do arquivo para exibição — remover lixo técnico
+    final displayName = name.length > 40 
+        ? '${name.substring(0, 37)}...' 
+        : name;
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('📖 Processando $name...'),
+        content: const Text('📖 Analisando livro... pode levar 30s'),
         backgroundColor: const Color(0xFF2A2218),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -159,15 +163,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('📚',
-                              style: TextStyle(fontSize: 64)),
-                          const SizedBox(height: 16),
-                          const Text('Sua biblioteca está vazia'),
+                          const Text('📚', style: TextStyle(fontSize: 72)),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Sua biblioteca está vazia',
+                            style: TextStyle(fontSize: 16),
+                          ),
                           const SizedBox(height: 8),
-                          FilledButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Adicionar livro'),
-                            onPressed: _upload,
+                          Text(
+                            'Toque em + para adicionar um livro',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
                           ),
                         ],
                       ),
