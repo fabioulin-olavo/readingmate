@@ -7,8 +7,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Carregar key.properties se existir
+// Carregar key.properties (em android/ ou android/app/)
 val keyPropertiesFile = rootProject.file("key.properties")
+    .takeIf { it.exists() } ?: file("key.properties")
 val keyProperties = Properties()
 if (keyPropertiesFile.exists()) {
     keyProperties.load(FileInputStream(keyPropertiesFile))
