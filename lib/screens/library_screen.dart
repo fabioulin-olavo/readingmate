@@ -5,6 +5,9 @@ import '../services/api_service.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
 
+// Resolve a URL completa da capa
+Future<String> _baseUrl() => ApiService.getBaseUrl();
+
 // Paleta de capas geradas — 8 cores harmônicas, identidade própria ReadingMate
 const _coverColors = [
   Color(0xFF5C7A3E), // verde oliva
@@ -320,42 +323,14 @@ class _BookCover extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Capa gerada
+        // Capa — real se disponível, gerada caso contrário
         Expanded(
           child: Stack(children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [BoxShadow(
-                  color: color.withOpacity(0.35),
-                  blurRadius: 12, offset: const Offset(0, 4))],
-              ),
-              child: Column(children: [
-                // Barra decorativa no topo da capa
-                Container(height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  )),
-                Expanded(child: Center(
-                  child: Text(book.emoji,
-                    style: const TextStyle(fontSize: 36)))),
-                // Título na capa
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-                  child: Text(book.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
-                    )),
-                ),
-              ]),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: book.coverUrl != null
+                ? _RealCover(book: book, fallbackColor: color)
+                : _GeneratedCover(book: book, color: color),
             ),
             // Badge de revisão
             if (isDue)
@@ -380,6 +355,87 @@ class _BookCover extends StatelessWidget {
         Text(book.author,
           maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Color(0xFF8E8682), fontSize: 10)),
+      ]),
+    );
+  }
+}
+
+class _RealCover extends StatefulWidget {
+  final Book book;
+  final Color fallbackColor;
+  const _RealCover({required this.book, required this.fallbackColor});
+  @override
+  State<_RealCover> createState() => _RealCoverState();
+}
+
+class _RealCoverState extends State<_RealCover> {
+  String? _imageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final base = await ApiService.getBaseUrl();
+    if (mounted) setState(() => _imageUrl = '$base${widget.book.coverUrl}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_imageUrl == null) {
+      return _GeneratedCover(book: widget.book, color: widget.fallbackColor);
+    }
+    return Image.network(
+      _imageUrl!,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) =>
+        _GeneratedCover(book: widget.book, color: widget.fallbackColor),
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          color: widget.fallbackColor,
+          child: const Center(child: CircularProgressIndicator(
+            strokeWidth: 2, color: Colors.white54)),
+        );
+      },
+    );
+  }
+}
+
+class _GeneratedCover extends StatelessWidget {
+  final Book book;
+  final Color color;
+  const _GeneratedCover({required this.book, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        boxShadow: [BoxShadow(
+          color: color.withOpacity(0.35),
+          blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(children: [
+        Container(height: 4,
+          color: Colors.white.withOpacity(0.25)),
+        Expanded(child: Center(
+          child: Text(book.emoji, style: const TextStyle(fontSize: 36)))),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+          child: Text(book.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white, fontSize: 10,
+              fontWeight: FontWeight.w600, height: 1.3,
+            )),
+        ),
       ]),
     );
   }

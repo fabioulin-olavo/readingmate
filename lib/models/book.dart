@@ -5,6 +5,7 @@ class Book {
   final String emoji;
   final String added;
   final int chapters;
+  final String? coverUrl; // URL relativa ex: /api/cover/abc123
 
   Book({
     required this.id,
@@ -13,16 +14,13 @@ class Book {
     required this.emoji,
     required this.added,
     required this.chapters,
+    this.coverUrl,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
-    // Handle both 'id' and 'book_id'
     final id = json['id'] ?? json['book_id'] ?? '';
-    
-    // Handle 'created_at' from backend and 'added' from frontend/legacy
     final added = json['created_at'] ?? json['added'] ?? '';
 
-    // Handle outline for chapters count if available
     int chapterCount = 0;
     if (json['chapters'] != null) {
       chapterCount = json['chapters'];
@@ -37,6 +35,7 @@ class Book {
       emoji: json['emoji'] ?? '📚',
       added: added,
       chapters: chapterCount,
+      coverUrl: json['cover_url'] as String?,
     );
   }
 }
