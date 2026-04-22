@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
@@ -33,6 +34,8 @@ class _ChatScreenState extends State<ChatScreen>
   bool _tutorSpeaking = false;
   bool _tutorTyping = false;
   int _messageCount = 0;
+  double _bookProgress = 0.0; // 0.0–1.0
+  int _sessionScore = 0;
 
   final _player = AudioPlayer();
   final _recorder = AudioRecorder();
@@ -91,6 +94,17 @@ class _ChatScreenState extends State<ChatScreen>
         if (!speechDetected && _isRecording && _handsFree) {
           _stopHandsFreeRecording();
         }
+        return;
+      }
+
+      if (type == 'session_info') {
+        final chapter = (data['chapter'] as int? ?? 0);
+        final score = (data['score'] as num?)?.toInt() ?? 0;
+        setState(() {
+          _sessionScore = score;
+          // Progresso estimado: capítulo atual / total (aproximado)
+          _bookProgress = (chapter / 20.0).clamp(0.0, 1.0);
+        });
         return;
       }
 
@@ -393,29 +407,65 @@ class _ChatScreenState extends State<ChatScreen>
       child: Scaffold(
         appBar: AppBar(
           title: Text('${widget.book.emoji} ${widget.book.title}'),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(28),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _bookProgress,
+                        minHeight: 6,
+                        backgroundColor:
+                            Colors.white.withOpacity(0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          const Color(0xFFD97706),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${(_bookProgress * 100).toInt()}%',
+                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.star, size: 12, color: Colors.amber.shade400),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$_sessionScore',
+                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                  ),
+                  const SizedBox(width: 8),
+                  // Indicador de conexão
+                  Icon(
+                    _connected ? Icons.circle : Icons.circle_outlined,
+                    size: 8,
+                    color: _connected ? Colors.green : Colors.red,
+                  ),
+                ],
+              ),
+            ),
+          ),
           actions: [
             // Hands-free toggle
             IconButton(
               icon: Icon(
                   _handsFree ? Icons.hearing : Icons.hearing_disabled),
               tooltip: 'Hands-free',
-              color: _handsFree ? Colors.green : null,
+              color: _handsFree ? const Color(0xFFD97706) : null,
               onPressed: _toggleHandsFree,
-            ),
-            // Indicador de conexão
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(
-                _connected ? Icons.circle : Icons.circle_outlined,
-                size: 12,
-                color: _connected ? Colors.green : Colors.red,
-              ),
             ),
           ],
         ),
         body: Column(
           children: [
-            if (_connecting) const LinearProgressIndicator(),
+            if (_connecting) const LinearProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD97706)),
+            ),
             if (!_connected && !_connecting)
               MaterialBanner(
                 content: const Text('Desconectado do backend'),
@@ -460,90 +510,163 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
             ),
 
-            // Input
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 4)
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Botão de microfone (com pulse em hands-free)
-                  _buildMicButton(),
-                  // Campo de texto
-                  Expanded(
-                    child: TextField(
-                      controller: _textCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Escreva sua pergunta...',
-                        border: InputBorder.none,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      onSubmitted: (_) => _sendText(),
-                      maxLines: null,
-                    ),
-                  ),
-                  // Botão de enviar
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _connected ? _sendText : null,
-                  ),
-                ],
-              ),
-            ),
+            // Input — Lei de Hick: simples, focado
+            _buildInputBar(),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildInputBar() {
+    // Hands-free ativo: mic grande e central, sem campo de texto
+    if (_handsFree) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          border: Border(
+            top: BorderSide(
+                color: Colors.white.withOpacity(0.08)),
+          ),
+        ),
+        child: Center(child: _buildMicButton()),
+      );
+    }
+
+    // Modo manual: campo de texto + mic pequeno
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(color: Colors.white.withOpacity(0.08)),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildMicButton(),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _textCtrl,
+              decoration: InputDecoration(
+                hintText: 'Escreva sua resposta...',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.07),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                isDense: true,
+              ),
+              style: const TextStyle(fontSize: 14),
+              onSubmitted: (_) => _sendText(),
+              maxLines: null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Botão enviar — só ativo quando há texto
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _textCtrl,
+            builder: (_, val, __) => AnimatedOpacity(
+              opacity: val.text.isNotEmpty ? 1.0 : 0.3,
+              duration: const Duration(milliseconds: 200),
+              child: IconButton(
+                icon: const Icon(Icons.send_rounded,
+                    color: Color(0xFFD97706)),
+                onPressed:
+                    _connected && val.text.isNotEmpty ? _sendText : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMicButton() {
     if (_handsFree && _isRecording) {
-      // Mic pulsando — gravando em hands-free
+      // Mic GRANDE pulsando — gravando em hands-free (Lei de Fitts)
       return AnimatedBuilder(
         animation: _pulseAnim,
         builder: (context, child) => Transform.scale(
           scale: _pulseAnim.value,
-          child: IconButton(
-            icon: const Icon(Icons.mic, color: Colors.red),
-            tooltip: 'Gravando... (hands-free)',
-            onPressed: _stopHandsFreeRecording,
+          child: GestureDetector(
+            onTap: _stopHandsFreeRecording,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.shade700,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.4),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.mic, color: Colors.white, size: 36),
+            ),
           ),
         ),
       );
     }
 
     if (_handsFree && _tutorSpeaking) {
-      // Tutor falando
-      return IconButton(
-        icon: const Icon(Icons.volume_up, color: Colors.blue),
-        tooltip: 'Tutor falando...',
-        onPressed: null,
+      return Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFD97706).withOpacity(0.15),
+          border: Border.all(color: const Color(0xFFD97706), width: 2),
+        ),
+        child: const Icon(Icons.volume_up,
+            color: Color(0xFFD97706), size: 32),
       );
     }
 
     if (_handsFree) {
-      // Hands-free ativo mas aguardando/standby
-      return IconButton(
-        icon: const Icon(Icons.mic_none, color: Colors.green),
-        tooltip: 'Hands-free ativo',
-        onPressed: _toggleHandsFree,
+      // Aguardando input — mic standby grande
+      return GestureDetector(
+        onTap: _toggleHandsFree,
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.green.withOpacity(0.15),
+            border: Border.all(color: Colors.green, width: 2),
+          ),
+          child: const Icon(Icons.mic_none, color: Colors.green, size: 32),
+        ),
       );
     }
 
-    // Modo manual (long-press)
+    // Modo manual (long-press) — mic pequeno na barra
     return GestureDetector(
       onLongPressStart: (_) => _startRecording(),
       onLongPressEnd: (_) => _stopRecording(),
-      child: IconButton(
-        icon: Icon(_isRecording ? Icons.mic : Icons.mic_none),
-        color: _isRecording ? Colors.red : null,
-        onPressed: null,
-        tooltip: 'Segure para falar',
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _isRecording
+              ? Colors.red.withOpacity(0.15)
+              : Colors.white.withOpacity(0.07),
+        ),
+        child: Icon(
+          _isRecording ? Icons.mic : Icons.mic_none,
+          size: 20,
+          color: _isRecording ? Colors.red : Colors.white60,
+        ),
       ),
     );
   }
@@ -561,28 +684,35 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.78),
+            maxWidth: MediaQuery.of(context).size.width * 0.80),
         decoration: BoxDecoration(
-          color:
-              isUser ? colors.primary : colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomRight:
-                isUser ? const Radius.circular(4) : null,
-            bottomLeft:
-                !isUser ? const Radius.circular(4) : null,
+          color: isUser
+              ? const Color(0xFFD97706)
+              : const Color(0xFF2A2218),
+          borderRadius: BorderRadius.circular(18).copyWith(
+            bottomRight: isUser ? const Radius.circular(4) : null,
+            bottomLeft: !isUser ? const Radius.circular(4) : null,
           ),
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-              color: isUser
-                  ? colors.onPrimary
-                  : colors.onSurface),
-        ),
+        child: isUser
+            ? Text(
+                message.text,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                message.text,
+                style: GoogleFonts.merriweather(
+                  fontSize: 14,
+                  height: 1.65,
+                  color: Colors.white.withOpacity(0.92),
+                ),
+              ),
       ),
     );
   }
