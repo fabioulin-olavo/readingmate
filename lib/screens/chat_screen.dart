@@ -466,7 +466,7 @@ class _ChatScreenState extends State<ChatScreen>
               icon: Icon(
                   _handsFree ? Icons.hearing : Icons.hearing_disabled),
               tooltip: 'Hands-free',
-              color: _handsFree ? const Color(0xFFF59E0B) : null,
+              color: _handsFree ? const Color(0xFF5C7A3E) : null,
               onPressed: _toggleHandsFree,
             ),
           ],
@@ -474,7 +474,7 @@ class _ChatScreenState extends State<ChatScreen>
         body: Column(
           children: [
             if (_connecting) const LinearProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5C7A3E)),
             ),
             if (!_connected && !_connecting)
               MaterialBanner(
@@ -587,7 +587,7 @@ class _ChatScreenState extends State<ChatScreen>
               duration: const Duration(milliseconds: 200),
               child: IconButton(
                 icon: const Icon(Icons.send_rounded,
-                    color: Color(0xFFF59E0B)),
+                    color: Color(0xFF5C7A3E)),
                 onPressed:
                     _connected && val.text.isNotEmpty ? _sendText : null,
               ),
@@ -612,7 +612,7 @@ class _ChatScreenState extends State<ChatScreen>
               height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.red.shade700,
+                color: const Color(0xFF5C7A3E),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.red.withOpacity(0.4),
@@ -634,11 +634,11 @@ class _ChatScreenState extends State<ChatScreen>
         height: 72,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFF59E0B).withOpacity(0.15),
-          border: Border.all(color: const Color(0xFFF59E0B), width: 2),
+          color: const Color(0xFF5C7A3E).withOpacity(0.12),
+          border: Border.all(color: const Color(0xFF5C7A3E), width: 2),
         ),
         child: const Icon(Icons.volume_up,
-            color: Color(0xFFF59E0B), size: 32),
+            color: Color(0xFF5C7A3E), size: 32),
       );
     }
 
@@ -701,8 +701,8 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isUser
-              ? const Color(0xFFF59E0B)
-              : const Color(0xFF1E1E2E),
+              ? const Color(0xFF5C7A3E)
+              : const Color(0xFFEDE8E0),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),
@@ -718,7 +718,7 @@ class _MessageBubble extends StatelessWidget {
           style: TextStyle(
             fontSize: 15,
             height: 1.55,
-            color: isUser ? Colors.black87 : Colors.white.withOpacity(0.9),
+            color: isUser ? Colors.white : const Color(0xFF2A2A2A),
             fontWeight: isUser ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
@@ -738,7 +738,7 @@ class _TypingBubble extends StatelessWidget {
         margin: const EdgeInsets.only(top: 4, bottom: 4, right: 48),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E2E),
+          color: const Color(0xFFEDE8E0),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(18),
             topRight: Radius.circular(18),
@@ -794,7 +794,7 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
     child: Container(
       width: 7, height: 7,
       decoration: const BoxDecoration(
-        color: Color(0xFFF59E0B),
+        color: Color(0xFF5C7A3E),
         shape: BoxShape.circle,
       ),
     ),

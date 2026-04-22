@@ -5,6 +5,19 @@ import '../services/api_service.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
 
+// Paleta de capas geradas — 8 cores harmônicas, identidade própria ReadingMate
+const _coverColors = [
+  Color(0xFF5C7A3E), // verde oliva
+  Color(0xFF3A5F7A), // azul sereno
+  Color(0xFF8B4513), // castanho terra
+  Color(0xFF6B4C7A), // roxo suave
+  Color(0xFF2E6B5E), // verde água
+  Color(0xFF7A4A3A), // terracota
+  Color(0xFF4A6B8B), // azul aço
+  Color(0xFF6B6B3A), // verde musgo
+];
+Color _coverColor(String id) => _coverColors[id.hashCode.abs() % _coverColors.length];
+
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
   @override
@@ -16,9 +29,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Set<String> _dueBookIds = {};
   bool _loading = true;
   String? _error;
+  final _searchCtrl = TextEditingController();
+  String _query = '';
 
   @override
   void initState() { super.initState(); _load(); }
+
+  @override
+  void dispose() { _searchCtrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
@@ -40,13 +58,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Row(children: [
         SizedBox(width:14, height:14,
-          child: CircularProgressIndicator(strokeWidth:2, color: Color(0xFFF59E0B))),
+          child: CircularProgressIndicator(strokeWidth:2, color: Color(0xFF5C7A3E))),
         SizedBox(width:10),
-        Text('Analisando...', style: TextStyle(color: Colors.white70)),
+        Text('Analisando livro... 30s'),
       ]),
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: Colors.white,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE8E0D8)),
+      ),
       duration: const Duration(seconds: 40),
     ));
     try {
@@ -55,18 +76,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${book.emoji} Adicionado!', style: const TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFF1C1C1E),
+          content: Text('${book.emoji} ${book.title} adicionado!'),
+          backgroundColor: Colors.white,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF5C7A3E)),
+          ),
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Erro. Tente novamente.', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.red.shade900, behavior: SnackBarBehavior.floating,
+          content: const Text('Erro ao processar. Tente novamente.'),
+          backgroundColor: Colors.red.shade100,
+          behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
@@ -75,15 +100,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _delete(Book book) async {
     final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1C1C1E),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Remover?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      content: Text('${book.emoji} ${book.title}', style: const TextStyle(color: Colors.white54)),
+      backgroundColor: const Color(0xFFFEFCF8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Remover livro?',
+        style: TextStyle(color: Color(0xFF2A2A2A), fontWeight: FontWeight.bold)),
+      content: Text('${book.emoji} ${book.title}',
+        style: const TextStyle(color: Color(0xFF6B6B6B))),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar', style: TextStyle(color: Colors.white38))),
+          child: const Text('Cancelar', style: TextStyle(color: Color(0xFF6B6B6B)))),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF453A)),
+          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
           onPressed: () => Navigator.pop(context, true),
           child: const Text('Remover')),
       ],
@@ -93,76 +120,115 @@ class _LibraryScreenState extends State<LibraryScreen> {
     setState(() => _books.remove(book));
   }
 
+  List<Book> get _filtered => _query.isEmpty ? _books
+    : _books.where((b) =>
+        b.title.toLowerCase().contains(_query.toLowerCase()) ||
+        b.author.toLowerCase().contains(_query.toLowerCase())).toList();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
-      body: SafeArea(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Header ──────────────────────────────────────────────────────────
+      backgroundColor: const Color(0xFFF7F3EE),
+      body: SafeArea(child: Column(children: [
+        // ── Header ──────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Biblioteca', style: TextStyle(
-                color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800,
-                letterSpacing: -1.2, height: 1.0)),
-              const SizedBox(height: 4),
-              Text(_books.isEmpty ? 'Nenhum livro ainda'
-                  : '${_books.length} livro${_books.length != 1 ? "s" : ""}',
-                style: const TextStyle(color: Color(0xFF8E8E93), fontSize: 15)),
+              const Text('Minha Biblioteca',
+                style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 26,
+                  fontWeight: FontWeight.w800, letterSpacing: -0.8)),
+              if (_books.isNotEmpty)
+                Text('${_books.length} livro${_books.length != 1 ? "s" : ""}',
+                  style: const TextStyle(color: Color(0xFF8E8682), fontSize: 13)),
             ])),
             GestureDetector(
               onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen())),
-              child: Container(width:38, height:38,
-                decoration: BoxDecoration(color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.settings_outlined, color: Color(0xFF8E8E93), size:18)),
+              child: Container(width:36, height:36,
+                decoration: BoxDecoration(color: const Color(0xFFEDE8E0),
+                  borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.settings_outlined,
+                  color: Color(0xFF6B6B6B), size: 18)),
             ),
             const SizedBox(width: 8),
             GestureDetector(onTap: _load,
-              child: Container(width:38, height:38,
-                decoration: BoxDecoration(color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.refresh_rounded, color: Color(0xFF8E8E93), size:18)),
+              child: Container(width:36, height:36,
+                decoration: BoxDecoration(color: const Color(0xFFEDE8E0),
+                  borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.refresh_rounded,
+                  color: Color(0xFF6B6B6B), size: 18)),
             ),
           ]),
         ),
-        const SizedBox(height: 20),
 
-        // ── Content ─────────────────────────────────────────────────────────
+        // ── Busca ────────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+          child: Container(
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE8E0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v),
+              style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Buscar livros...',
+                hintStyle: TextStyle(color: Color(0xFF9E9892), fontSize: 14),
+                prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF9E9892), size: 18),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // ── Grid ─────────────────────────────────────────────────────────
         Expanded(child: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF59E0B)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF5C7A3E)))
           : _error != null ? _buildError()
-          : _books.isEmpty ? _buildEmpty()
-          : _buildList()),
+          : _filtered.isEmpty ? _buildEmpty()
+          : _buildGrid()),
       ])),
 
-      // ── Bottom Nav + FAB area ────────────────────────────────────────────
+      // ── Bottom Nav ───────────────────────────────────────────────────
       bottomNavigationBar: Container(
-        height: 82,
         decoration: const BoxDecoration(
-          color: Color(0xFF1C1C1E),
-          border: Border(top: BorderSide(color: Color(0xFF2C2C2E))),
+          color: Color(0xFFFEFCF8),
+          border: Border(top: BorderSide(color: Color(0xFFE8E0D8))),
         ),
-        child: Row(children: [
-          Expanded(child: _NavItem(icon: Icons.library_books_rounded, label: 'Biblioteca', active: true)),
-          Expanded(child: _NavItem(icon: Icons.bar_chart_rounded, label: 'Progresso', active: false)),
-          const SizedBox(width: 72),
-          Expanded(child: _NavItem(icon: Icons.search_rounded, label: 'Buscar', active: false)),
-          Expanded(child: _NavItem(icon: Icons.person_outline_rounded, label: 'Perfil', active: false)),
-        ]),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(height: 60, child: Row(children: [
+            _NavBtn(icon: Icons.library_books_rounded, label: 'Biblioteca',
+              active: true, color: const Color(0xFF5C7A3E)),
+            _NavBtn(icon: Icons.show_chart_rounded, label: 'Progresso',
+              active: false, color: const Color(0xFF5C7A3E)),
+            const SizedBox(width: 64), // espaço pro FAB
+            _NavBtn(icon: Icons.search_rounded, label: 'Buscar',
+              active: false, color: const Color(0xFF5C7A3E)),
+            _NavBtn(icon: Icons.person_outline_rounded, label: 'Perfil',
+              active: false, color: const Color(0xFF5C7A3E)),
+          ])),
+        ),
       ),
       floatingActionButton: GestureDetector(
         onTap: _upload,
         child: Container(
           width: 56, height: 56,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF59E0B),
+          decoration: BoxDecoration(
+            color: const Color(0xFF5C7A3E),
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Color(0x80F59E0B), blurRadius: 20, offset: Offset(0,6))],
+            boxShadow: [BoxShadow(
+              color: const Color(0xFF5C7A3E).withOpacity(0.4),
+              blurRadius: 16, offset: const Offset(0, 6))],
           ),
-          child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -170,128 +236,151 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildError() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-    const Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFF3A3A3C)),
+    const Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFFCCC5BC)),
     const SizedBox(height: 12),
-    const Text('Sem conexão', style: TextStyle(color: Color(0xFF8E8E93), fontSize: 16)),
-    const SizedBox(height: 20),
-    TextButton(onPressed: _load, child: const Text('Tentar novamente',
-      style: TextStyle(color: Color(0xFFF59E0B)))),
+    const Text('Sem conexão com o servidor',
+      style: TextStyle(color: Color(0xFF8E8682), fontSize: 15)),
+    const SizedBox(height: 16),
+    TextButton(onPressed: _load,
+      child: const Text('Tentar novamente',
+        style: TextStyle(color: Color(0xFF5C7A3E)))),
   ]));
 
   Widget _buildEmpty() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 100, height: 100,
-      decoration: BoxDecoration(color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(28)),
-      child: const Center(child: Text('📚', style: TextStyle(fontSize: 48)))),
+    Container(width: 96, height: 96,
+      decoration: BoxDecoration(color: const Color(0xFFEDE8E0),
+        borderRadius: BorderRadius.circular(24)),
+      child: const Center(child: Text('📚', style: TextStyle(fontSize: 44)))),
     const SizedBox(height: 20),
-    const Text('Biblioteca vazia', style: TextStyle(
-      color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+    const Text('Biblioteca vazia',
+      style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 20,
+        fontWeight: FontWeight.bold)),
     const SizedBox(height: 6),
-    const Text('Toque em + para adicionar um livro',
-      style: TextStyle(color: Color(0xFF8E8E93), fontSize: 14)),
-    const SizedBox(height: 120),
+    const Text('Toque em + para adicionar seu primeiro livro',
+      style: TextStyle(color: Color(0xFF8E8682), fontSize: 13)),
+    const SizedBox(height: 100),
   ]));
 
-  Widget _buildList() => ListView.builder(
-    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-    itemCount: _books.length,
-    itemBuilder: (ctx, i) => _BookRow(
-      book: _books[i], isDue: _dueBookIds.contains(_books[i].id),
+  Widget _buildGrid() => GridView.builder(
+    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 3,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 12,
+      childAspectRatio: 0.62,
+    ),
+    itemCount: _filtered.length,
+    itemBuilder: (ctx, i) => _BookCover(
+      book: _filtered[i],
+      color: _coverColor(_filtered[i].id),
+      isDue: _dueBookIds.contains(_filtered[i].id),
       onTap: () async {
-        await Navigator.push(ctx, MaterialPageRoute(builder: (_) => ChatScreen(book: _books[i])));
+        await Navigator.push(ctx,
+          MaterialPageRoute(builder: (_) => ChatScreen(book: _filtered[i])));
         _load();
       },
-      onDelete: () => _delete(_books[i]),
+      onLongPress: () => _delete(_filtered[i]),
     ),
   );
 }
 
-class _NavItem extends StatelessWidget {
+class _NavBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  const _NavItem({required this.icon, required this.label, required this.active});
+  final Color color;
+  const _NavBtn({required this.icon, required this.label,
+    required this.active, required this.color});
   @override
-  Widget build(BuildContext context) => Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-    Icon(icon, color: active ? const Color(0xFFF59E0B) : const Color(0xFF3A3A3C), size: 24),
-    const SizedBox(height: 3),
-    Text(label, style: TextStyle(
-      color: active ? const Color(0xFFF59E0B) : const Color(0xFF3A3A3C),
-      fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
-  ]);
+  Widget build(BuildContext context) => Expanded(child:
+    Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(icon, size: 22,
+        color: active ? color : const Color(0xFFBDB7B0)),
+      const SizedBox(height: 2),
+      Text(label, style: TextStyle(
+        fontSize: 10,
+        color: active ? color : const Color(0xFFBDB7B0),
+        fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
+    ]));
 }
 
-class _BookRow extends StatelessWidget {
+class _BookCover extends StatelessWidget {
   final Book book;
+  final Color color;
   final bool isDue;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
-  const _BookRow({required this.book, required this.isDue, required this.onTap, required this.onDelete});
+  final VoidCallback onLongPress;
+
+  const _BookCover({required this.book, required this.color,
+    required this.isDue, required this.onTap, required this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 1),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFF1C1C1E))),
-        ),
-        child: Row(children: [
-          // Cover
-          Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
-              borderRadius: BorderRadius.circular(12)),
-            child: Center(child: Text(book.emoji, style: const TextStyle(fontSize: 28)))),
-          const SizedBox(width: 14),
-          // Info
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 16,
-                fontWeight: FontWeight.w600, letterSpacing: -0.2)),
-            const SizedBox(height: 3),
-            Text(book.author, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF8E8E93), fontSize: 13)),
-            if (book.chapters > 0 || isDue) ...[
-              const SizedBox(height: 6),
-              Row(children: [
-                if (book.chapters > 0)
-                  _Chip('${book.chapters} cap.', const Color(0xFF2C2C2E), const Color(0xFF8E8E93)),
-                if (book.chapters > 0 && isDue) const SizedBox(width: 6),
-                if (isDue) _Chip('Revisar', const Color(0xFF3A1A00), const Color(0xFFF59E0B)),
+      onLongPress: onLongPress,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Capa gerada
+        Expanded(
+          child: Stack(children: [
+            Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(
+                  color: color.withOpacity(0.35),
+                  blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Column(children: [
+                // Barra decorativa no topo da capa
+                Container(height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  )),
+                Expanded(child: Center(
+                  child: Text(book.emoji,
+                    style: const TextStyle(fontSize: 36)))),
+                // Título na capa
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                  child: Text(book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    )),
+                ),
               ]),
-            ],
-          ])),
-          const SizedBox(width: 8),
-          // Actions
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF3A3A3C), size: 20),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: onDelete,
-              child: Container(width: 28, height: 28,
-                decoration: BoxDecoration(color: const Color(0xFF1C1C1E), shape: BoxShape.circle),
-                child: const Icon(Icons.close_rounded, color: Color(0xFF8E8E93), size: 14)),
             ),
+            // Badge de revisão
+            if (isDue)
+              Positioned(top: 6, right: 6,
+                child: Container(
+                  width: 20, height: 20,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8A020),
+                    shape: BoxShape.circle),
+                  child: const Center(
+                    child: Text('!', style: TextStyle(
+                      color: Colors.white, fontSize: 11,
+                      fontWeight: FontWeight.bold))))),
           ]),
-        ]),
-      ),
+        ),
+        const SizedBox(height: 7),
+        // Título abaixo da capa
+        Text(book.title,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Color(0xFF1A1A1A),
+            fontSize: 11, fontWeight: FontWeight.w600)),
+        Text(book.author,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Color(0xFF8E8682), fontSize: 10)),
+      ]),
     );
   }
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color bg;
-  final Color fg;
-  const _Chip(this.label, this.bg, this.fg);
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-    child: Text(label, style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600)),
-  );
 }
