@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../widgets/chapter_progress_bar.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -36,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen>
   int _messageCount = 0;
   double _bookProgress = 0.0; // 0.0–1.0
   int _sessionScore = 0;
+  int _currentChapter = 0;
 
   final _player = AudioPlayer();
   final _recorder = AudioRecorder();
@@ -100,10 +102,11 @@ class _ChatScreenState extends State<ChatScreen>
       if (type == 'session_info') {
         final chapter = (data['chapter'] as int? ?? 0);
         final score = (data['score'] as num?)?.toInt() ?? 0;
+        final total = widget.book.chapters > 0 ? widget.book.chapters : 20;
         setState(() {
           _sessionScore = score;
-          // Progresso estimado: capítulo atual / total (aproximado)
-          _bookProgress = (chapter / 20.0).clamp(0.0, 1.0);
+          _currentChapter = chapter;
+          _bookProgress = (chapter / total).clamp(0.0, 1.0);
         });
         return;
       }
@@ -408,42 +411,42 @@ class _ChatScreenState extends State<ChatScreen>
         appBar: AppBar(
           title: Text('${widget.book.emoji} ${widget.book.title}'),
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(28),
+            preferredSize: const Size.fromHeight(36),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Row(
                 children: [
+                  // Barra de capítulos
                   Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: _bookProgress,
-                        minHeight: 6,
-                        backgroundColor:
-                            Colors.white.withOpacity(0.12),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          const Color(0xFFD97706),
-                        ),
-                      ),
+                    child: ChapterProgressBar(
+                      progress: _bookProgress,
+                      totalChapters: widget.book.chapters > 0
+                          ? widget.book.chapters
+                          : 10,
+                      currentChapter: _currentChapter,
+                      height: 6,
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // % do livro
                   Text(
                     '${(_bookProgress * 100).toInt()}%',
-                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                    style: const TextStyle(fontSize: 11, color: Colors.white54),
                   ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.star, size: 12, color: Colors.amber.shade400),
+                  const SizedBox(width: 10),
+                  // Score
+                  Icon(Icons.star_rounded,
+                      size: 12, color: Colors.amber.shade400),
                   const SizedBox(width: 3),
                   Text(
                     '$_sessionScore',
-                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                    style: const TextStyle(fontSize: 11, color: Colors.white54),
                   ),
                   const SizedBox(width: 8),
-                  // Indicador de conexão
+                  // Conexão
                   Icon(
                     _connected ? Icons.circle : Icons.circle_outlined,
-                    size: 8,
+                    size: 7,
                     color: _connected ? Colors.green : Colors.red,
                   ),
                 ],
