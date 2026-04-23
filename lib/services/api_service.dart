@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/book.dart';
@@ -6,6 +7,7 @@ import '../models/book.dart';
 class ApiService {
   static const _urlKey = 'backend_url';
   static const _defaultUrl = 'http://54.180.201.135:8765'; // Servidor ReadingMate
+  static const _langKey = 'preferred_language'; // idioma preferencial do usuário
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -15,6 +17,22 @@ class ApiService {
   static Future<void> setBaseUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_urlKey, url);
+  }
+
+  /// Idioma preferencial do usuário no app (padrão = idioma do sistema)
+  static Future<String> getPreferredLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Padrão: idioma do sistema (simplificado para en ou pt)
+    final stored = prefs.getString(_langKey);
+    if (stored != null) return stored;
+    // Detectar idioma do sistema via locale
+    final locale = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    return locale.startsWith('pt') ? 'pt' : 'en';
+  }
+
+  static Future<void> setPreferredLanguage(String lang) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_langKey, lang);
   }
 
   static Future<List<Book>> fetchLibrary() async {

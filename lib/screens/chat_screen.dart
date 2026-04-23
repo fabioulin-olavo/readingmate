@@ -65,32 +65,89 @@ class _ChatScreenState extends State<ChatScreen>
     Future.delayed(const Duration(milliseconds: 200), _askLanguageThenConnect);
   }
 
+  // Mapa de códigos de idioma para nomes e flags
+  static const _langNames = {
+    'en': '🇬🇧 English',
+    'pt': '🇧🇷 Português',
+    'ja': '🇯🇵 日本語',
+    'zh': '🇨🇳 中文',
+    'ko': '🇰🇷 한국어',
+    'ru': '🇷🇺 Русский',
+    'fr': '🇫🇷 Français',
+    'es': '🇪🇸 Español',
+    'de': '🇩🇪 Deutsch',
+  };
+
   Future<void> _askLanguageThenConnect() async {
     if (!mounted) return;
+
+    // Idioma preferencial do usuário no app
+    final userLang = await ApiService.getPreferredLanguage();
+    // Idioma detectado do livro (via campo no Book — se disponível — ou 'auto')
+    final bookLang = widget.book.id.isNotEmpty ? 'auto' : userLang;
+
+    // Se idioma do livro == idioma do usuário, conectar direto
+    // Caso contrário, perguntar
+    final userLangName = _langNames[userLang] ?? userLang;
+    final otherLangs = _langNames.entries.where((e) => e.key != userLang).toList();
+
     final lang = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text('Idioma da aula'),
-        content: const Text('Em qual idioma você prefere que o tutor conduza a aula?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'en'),
-            child: const Text('🇬🇧 English'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'pt'),
-            child: const Text('🇧🇷 Português'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'auto'),
-            child: const Text('Auto (idioma do livro)'),
-          ),
-        ],
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Idioma da aula',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Em qual idioma prefere que o tutor conduza a aula?',
+              style: TextStyle(color: Colors.white70, fontSize: 13)),
+            const SizedBox(height: 16),
+            // Opção 1: idioma do livro
+            _LangOption(
+              icon: '📖',
+              label: 'Idioma do livro',
+              subtitle: '(detectado automaticamente)',
+              onTap: () => Navigator.pop(_, 'auto'),
+            ),
+            const SizedBox(height: 8),
+            // Opção 2: idioma preferencial do usuário
+            _LangOption(
+              icon: '📱',
+              label: userLangName,
+              subtitle: 'Meu idioma preferencial',
+              onTap: () => Navigator.pop(_, userLang),
+            ),
+            const Divider(color: Colors.white12, height: 24),
+            const Text('Outro idioma:',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: otherLangs.map((e) => GestureDetector(
+                onTap: () => Navigator.pop(_, e.key),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(e.value,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ),
+              )).toList(),
+            ),
+          ],
+        ),
       ),
     );
+
     if (mounted) {
-      setState(() => _sessionLang = lang ?? 'en');
+      setState(() => _sessionLang = lang ?? userLang);
       _connect();
     }
   }
@@ -865,4 +922,55 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
       ),
     ),
   );
+}
+
+class _LangOption extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _LangOption({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Row(
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                  style: const TextStyle(
+                    color: Colors.white, fontSize: 14,
+                    fontWeight: FontWeight.w600)),
+                Text(subtitle,
+                  style: const TextStyle(
+                    color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+            const Spacer(),
+            const Icon(Icons.chevron_right_rounded,
+              color: Colors.white24, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
 }
