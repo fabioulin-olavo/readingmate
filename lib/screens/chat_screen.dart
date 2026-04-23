@@ -37,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen>
   double _bookProgress = 0.0; // 0.0–1.0
   int _sessionScore = 0;
   int _currentChapter = 0;
+  String _sessionLang = 'en'; // idioma da sessão (pode ser alterado pelo user)
 
   final _player = AudioPlayer();
   final _recorder = AudioRecorder();
@@ -60,14 +61,49 @@ class _ChatScreenState extends State<ChatScreen>
     _pulseAnim = Tween<double>(begin: 1.0, end: 1.25).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
-    _connect();
+    // Perguntar idioma e depois conectar
+    Future.delayed(const Duration(milliseconds: 200), _askLanguageThenConnect);
+  }
+
+  Future<void> _askLanguageThenConnect() async {
+    if (!mounted) return;
+    final lang = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Idioma da aula'),
+        content: const Text('Em qual idioma você prefere que o tutor conduza a aula?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'en'),
+            child: const Text('🇬🇧 English'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'pt'),
+            child: const Text('🇧🇷 Português'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'auto'),
+            child: const Text('Auto (idioma do livro)'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) {
+      setState(() => _sessionLang = lang ?? 'en');
+      _connect();
+    }
   }
 
   Future<void> _connect() async {
     setState(() => _connecting = true);
     try {
       // Conectar ao WebSocket diretamente com o book_id
-      final wsUrl = await ApiService.getWsUrl(widget.book.id);
+      final wsBase = await ApiService.getWsUrl(widget.book.id);
+      // Passar idioma escolhido pelo usuário via query param
+      final wsUrl = _sessionLang == 'auto'
+          ? wsBase
+          : '$wsBase?lang=$_sessionLang';
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _sub = _channel!.stream.listen(
         _onMessage,
@@ -461,13 +497,43 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ),
           actions: [
-            // Hands-free toggle
-            IconButton(
-              icon: Icon(
-                  _handsFree ? Icons.hearing : Icons.hearing_disabled),
-              tooltip: 'Hands-free',
-              color: _handsFree ? const Color(0xFF5C7A3E) : null,
-              onPressed: _toggleHandsFree,
+            // Botão Hands-free com texto claro
+            GestureDetector(
+              onTap: _toggleHandsFree,
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _handsFree
+                      ? const Color(0xFF5C7A3E)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _handsFree
+                        ? const Color(0xFF5C7A3E)
+                        : Colors.white24,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _handsFree ? Icons.mic : Icons.mic_none,
+                      size: 14,
+                      color: _handsFree ? Colors.white : Colors.white60,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Hands-free',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _handsFree ? Colors.white : Colors.white60,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
